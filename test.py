@@ -132,8 +132,8 @@ def evalOneMax(individual, present=False):
 
 
 toolbox.register("evaluate", evalOneMax)
-toolbox.register("mate", tools.cxSimulatedBinary, eta=0.3)
-toolbox.register("mutate", tools.mutGaussian(), indpb=0.05)
+toolbox.register("mate", tools.cxTwoPoint)
+toolbox.register("mutate", tools.mutFlipBit, indpb=0.05)
 toolbox.register("select", tools.selTournament, tournsize=3)
 
 population = toolbox.population(n=300)
@@ -151,6 +151,3 @@ for gen in range(NGEN):
 top1 = tools.selBest(population, k=1)
 
 env.plot([[top1[0][0], top1[0][1]], [top1[0][2], top1[0][3]]])
-
-
-# comment
