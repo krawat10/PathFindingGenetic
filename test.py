@@ -6,7 +6,7 @@ from deap import base
 from deap import creator
 from deap import tools, algorithms
 from Point import Point
-from tools import Environment
+from tools import Environment, check_collision
 
 env = Environment()
 env.readJson('scen5.json')
@@ -15,79 +15,8 @@ env.readJson('scen5.json')
 print('Od', env.start)
 print('Do', env.stop)
 print('Przeszkody:', env.staticObstacles)
-
 start_point = Point(env.start[0], env.start[1])
 end_point = Point(env.stop[0], env.stop[1])
-
-
-# ------  Przykładowa struktura  ------ #
-class Path(list):
-    """klasa stanowiaca przykladowy interfejs
-       nie ma obowiazku korzystani z tej struktury
-    """
-    ABC = 9
-
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.env = env
-
-    def getPoints(self) -> List[Point]:
-        pass
-
-    def plot(self):
-        self.env.plot(self.getPoints())
-
-    @staticmethod
-    def __distanseBetweenLineAndPoint__(p1, p2, x):
-        """obliczenie dystanus miedzy linią dana przez punkty p1 i p2
-           a punktem x
-        """
-        pass
-
-    def convert_to_foruma(self, p1: Point, p2: Point):
-        y1 = p1.y
-        y2 = p2.y
-        x1 = p1.x
-        x2 = p2.x
-
-        A = y1 - y2
-        B = x2 - x1
-        C = x1 * y2 - y1 * x2
-
-        return A, B, C
-
-    def checkCollision(self, p1: Point, p2: Point, circle_point: Point, radius):
-        a, b, c = p.convert_to_foruma(p1, p2)
-
-        # Finding the distance of line
-        # from center.
-        try:
-            dist = ((abs(a * circle_point.x + b * circle_point.y + c)) / math.sqrt(a * a + b * b))
-        except:
-            return sys.maxsize
-        check_symbol_x = (p1.x - circle_point.x) * (p2.x - circle_point.x)
-
-        # Checking if the distance is less
-        # than, greater than or equal to radius.
-        if radius >= dist:
-            distance_between_points = p1.distance(p2)
-            distance_between_p1_circle = p1.distance(circle_point) - radius
-            distance_between_p2_circle = p2.distance(circle_point) - radius
-
-            if (distance_between_points > distance_between_p1_circle) and (
-                    distance_between_points > distance_between_p2_circle):
-                return True
-
-        return False
-
-    def checkColission(self):
-        pass
-
-    def pathLength(self):
-        pass
-
-
-p = Path()
 
 creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
 creator.create("Individual", list, fitness=creator.FitnessMin)
@@ -107,37 +36,36 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 DEATH_PENALTY = sys.maxsize
 
 
-def evalOneMax(individual, present=False):
-    first_point = Point(individual[0], individual[1])
-    second_point = Point(individual[2], individual[3])
+def evalOneMin(individual):
+    path_points = [start_point]
+    distance = 0
 
-    for obstacle in env.staticObstacles:
-        obstacle_point = Point(obstacle[0], obstacle[1])
-        if p.checkCollision(start_point, first_point, obstacle_point, obstacle[2]):
-            return (DEATH_PENALTY),
+    for i in range(int(len(individual) / 2)):
+        path_points.append(Point(individual[i * 2], individual[i * 2 + 1]))
 
-    for obstacle in env.staticObstacles:
-        obstacle_point = Point(obstacle[0], obstacle[1])
-        if p.checkCollision(first_point, second_point, obstacle_point, obstacle[2]):
-            return (DEATH_PENALTY),
+    path_points.append(end_point)
 
-    for obstacle in env.staticObstacles:
-        obstacle_point = Point(obstacle[0], obstacle[1])
-        if p.checkCollision(second_point, end_point, obstacle_point, obstacle[2]):
-            return (DEATH_PENALTY),
+    if any([not point.in_range() for point in path_points]):
+        return DEATH_PENALTY,
 
-    distance = start_point.distance(first_point) + first_point.distance(second_point) + second_point.distance(end_point)
+    for i in range(len(path_points) - 1):
+        distance += path_points[i].distance(path_points[i + 1])
+        for obstacle in env.staticObstacles:
+            obstacle_point = Point(obstacle[0], obstacle[1])
+            penalty = check_collision(path_points[i], path_points[i + 1], obstacle_point, obstacle[2])
+            if penalty != 0:
+                distance += (penalty * 500) ** 2
 
-    return (distance),
+    return distance,
 
 
-toolbox.register("evaluate", evalOneMax)
-toolbox.register("mate", tools.cxTwoPoint)
-toolbox.register("mutate", tools.mutFlipBit, indpb=0.05)
+toolbox.register("evaluate", evalOneMin)
+toolbox.register("mate", tools.cxSimulatedBinary, eta=0.3)
+toolbox.register("mutate", tools.mutGaussian, indpb=0.05, mu=0, sigma=1)
 toolbox.register("select", tools.selTournament, tournsize=3)
 
 population = toolbox.population(n=300)
-NGEN = 200
+NGEN = 400
 
 for gen in range(NGEN):
     offspring = algorithms.varAnd(population, toolbox, cxpb=0.3, mutpb=0.5)

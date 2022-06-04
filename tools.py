@@ -1,6 +1,11 @@
+import math
+import sys
+
 import matplotlib.pyplot as plt
 import numpy as np
 import json
+
+from Point import Point
 
 
 def readJson(obj):
@@ -12,8 +17,46 @@ def readJson(obj):
             if function in ['addCircle', 'setStart', 'setStop', 'addLine']:
                 getattr(obj, function)(*element[function])
         return
+
     obj.readJson = read
     return obj
+
+
+def convert_to_foruma(p1: Point, p2: Point):
+    y1 = p1.y
+    y2 = p2.y
+    x1 = p1.x
+    x2 = p2.x
+
+    A = y1 - y2
+    B = x2 - x1
+    C = x1 * y2 - y1 * x2
+
+    return A, B, C
+
+
+def check_collision(p1: Point, p2: Point, circle_point: Point, radius) -> float:
+    a, b, c = convert_to_foruma(p1, p2)
+
+    # Finding the distance of line
+    # from center.
+    try:
+        dist = ((abs(a * circle_point.x + b * circle_point.y + c)) / math.sqrt(a * a + b * b))
+    except:
+        return sys.maxsize
+
+    # Checking if the distance is less
+    # than, greater than or equal to radius.
+    if radius >= dist:
+        distance_between_points = p1.distance(p2)
+        distance_between_p1_circle = p1.distance(circle_point) - radius
+        distance_between_p2_circle = p2.distance(circle_point) - radius
+
+        if (distance_between_points > distance_between_p1_circle) and (
+                distance_between_points > distance_between_p2_circle):
+            return abs(radius - dist)
+
+    return 0
 
 
 @readJson
