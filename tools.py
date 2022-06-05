@@ -43,7 +43,7 @@ def check_collision(p1: Point, p2: Point, circle_point: Point, radius) -> float:
     try:
         dist = ((abs(a * circle_point.x + b * circle_point.y + c)) / math.sqrt(a * a + b * b))
     except:
-        return sys.maxsize
+        return -sys.maxsize
 
     # Checking if the distance is less
     # than, greater than or equal to radius.
@@ -54,9 +54,9 @@ def check_collision(p1: Point, p2: Point, circle_point: Point, radius) -> float:
 
         if (distance_between_points > distance_between_p1_circle) and (
                 distance_between_points > distance_between_p2_circle):
-            return abs(radius - dist)
+            return -abs(radius - dist)
 
-    return 0
+    return abs(radius - dist)
 
 
 @readJson
